@@ -1,0 +1,23 @@
+random_state: 42
+
+image:
+  pix_height: 28
+  pix_width: 28
+  num_channels: 1
+
+model:
+  num_classes: 10
+  num_batches: 256
+  batch_size: 128
+  epochs: 100
+  starting_epoch: 0
+  latent_dim: 100
+  embedding_dim: 50
+  label_smoothing:
+    run: True
+    degree: 0.1
+  learning_rate_decay:
+    run: True
+    rate: 0.8
+    epoch: 10
+

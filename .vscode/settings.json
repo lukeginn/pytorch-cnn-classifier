@@ -1,0 +1,7 @@
+{
+    // Set default formatter to be Black formatter
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true
+    },
+}

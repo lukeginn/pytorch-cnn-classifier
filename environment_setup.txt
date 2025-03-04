@@ -1,0 +1,3 @@
+conda create -n pytorch-gpu python=3.8 -y
+conda activate pytorch-gpu
+pip install torch torchvision torchaudio pyyaml --index-url https://download.pytorch.org/whl/cu118
