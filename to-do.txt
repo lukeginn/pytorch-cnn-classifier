@@ -1,0 +1,11 @@
+1. (DONE) Convert classes to data classes
+2. (DONE) Fix config
+3. (DONE) Change the type of config loader?
+4. (DONE) Put comments in, explaining each step
+5. (DONE) Put logging in
+6. Brake up the trainer and compiler into more unique private functions
+7. Expand the classes to calculate more metrics
+8. Log metrics to something like tensorboard
+9. What about cross-validation?
+10. Put in more configuration options
+11. What about testing different architectures
