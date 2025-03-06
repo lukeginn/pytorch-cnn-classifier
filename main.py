@@ -26,8 +26,7 @@ def main() -> None:
     model.compile()
 
     trainer = ModelTrainer(model, config)
-    trainer.train(train_images, train_labels)
-    trainer.evaluate(test_images, test_labels)
+    trainer.train(train_images, train_labels, test_images, test_labels)
 
     logger.info("Pipeline completed successfully")
 

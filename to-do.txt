@@ -4,7 +4,7 @@
 4. (DONE) Put comments in, explaining each step
 5. (DONE) Put logging in
 6. Brake up the trainer and compiler into more unique private functions
-7. Expand the classes to calculate more metrics
+7. (DONE) Expand the classes to calculate more metrics
 8. Log metrics to something like tensorboard
 9. What about cross-validation?
 10. (DONE) Put in more configuration options

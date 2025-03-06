@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import logging as logger
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 
 class ModelTrainer:
@@ -41,6 +42,9 @@ class ModelTrainer:
         """
         self.batch_size = config.model.batch_size
         self.epochs = config.model.epochs
+        self.evaluate_on_train = config.evaluation.train
+        self.evaluate_on_test = config.evaluation.test
+        self.evaluation_frequency = config.evaluation.epoch_frequency
 
         self.model = model
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,13 +53,15 @@ class ModelTrainer:
             f"ModelTrainer initialized with batch size: {self.batch_size} and epochs: {self.epochs}"
         )
 
-    def train(self, train_images, train_labels):
+    def train(self, train_images, train_labels, test_images, test_labels):
         """
         Trains the model on the provided training dataset.
 
         Args:
             train_images (numpy.ndarray): The training images.
             train_labels (numpy.ndarray): The training labels.
+            test_images (numpy.ndarray): The test images for evaluation.
+            test_labels (numpy.ndarray): The test labels for evaluation.
 
         Purpose:
             - Sets the model to training mode.
@@ -63,8 +69,6 @@ class ModelTrainer:
             - Iterates over the dataset for the specified number of epochs.
             - For each batch, performs the following steps:
                 - Moves the images and labels to the appropriate device (CPU or GPU).
-                - Resets the gradients of the model's parameters.
-                - Performs a forward pass to compute the model's predictions.
                 - Computes the loss between the predictions and the true labels.
                 - Performs a backward pass to compute the gradients.
                 - Updates the model's parameters using the optimizer.
@@ -96,42 +100,62 @@ class ModelTrainer:
             avg_loss = running_loss / len(train_loader)
             logger.info(f"Epoch [{epoch+1}/{self.epochs}], Loss: {avg_loss:.4f}")
 
-    def evaluate(self, test_images, test_labels):
+            if (epoch + 1) % self.evaluation_frequency == 0:
+                if self.evaluate_on_train:
+                    train_accuracy, train_precision, train_recall, train_f1 = self.evaluate(
+                        train_images, train_labels, "train"
+                    )
+                if self.evaluate_on_test:
+                    test_accuracy, test_precision, test_recall, test_f1 = self.evaluate(
+                        test_images, test_labels, "test"
+                    )
+
+    def evaluate(self, images, labels, dataset_type):
         """
-        Evaluates the model on the provided test dataset.
+        Evaluates the model on the provided dataset.
 
         Args:
-            test_images (numpy.ndarray): The test images.
-            test_labels (numpy.ndarray): The test labels.
+            images (numpy.ndarray): The images to evaluate.
+            labels (numpy.ndarray): The labels corresponding to the images.
+            dataset_type (str): The type of dataset being evaluated (e.g., "train", "test", "validation").
 
         Purpose:
             - Sets the model to evaluation mode.
-            - Creates a DataLoader for the test dataset.
-            - Iterates over the test dataset without computing gradients.
+            - Creates a DataLoader for the dataset.
+            - Iterates over the dataset without computing gradients.
             - For each batch, performs the following steps:
                 - Moves the images and labels to the appropriate device (CPU or GPU).
                 - Performs a forward pass to compute the model's predictions.
                 - Computes the number of correct predictions.
-            - Computes and logs the accuracy of the model on the test dataset.
+            - Computes and logs the accuracy, precision, recall, and F1-score of the model on the dataset.
         """
         self.model.eval()
-        test_dataset = TensorDataset(
-            torch.tensor(test_images, dtype=torch.float32),
-            torch.tensor(test_labels, dtype=torch.long),
+        dataset = TensorDataset(
+            torch.tensor(images, dtype=torch.float32),
+            torch.tensor(labels, dtype=torch.long),
         )
-        test_loader = DataLoader(
-            test_dataset, batch_size=self.batch_size, shuffle=False
+        data_loader = DataLoader(
+            dataset, batch_size=self.batch_size, shuffle=False
         )
 
-        correct = 0
-        total = 0
+        all_labels = []
+        all_predictions = []
         with torch.no_grad():
-            for images, labels in test_loader:
+            for images, labels in data_loader:
                 images, labels = images.to(self.device), labels.to(self.device)
                 outputs = self.model(images)
                 _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                all_labels.extend(labels.cpu().numpy())
+                all_predictions.extend(predicted.cpu().numpy())
 
-        accuracy = 100 * correct / total
-        logger.info(f"Accuracy of the model on the test images: {accuracy:.2f}%")
+        accuracy = accuracy_score(all_labels, all_predictions)
+        precision = precision_score(all_labels, all_predictions, average="weighted")
+        recall = recall_score(all_labels, all_predictions, average="weighted")
+        f1 = f1_score(all_labels, all_predictions, average="weighted")
+
+        logger.info(f"Accuracy of the model on the {dataset_type} images: {accuracy:.4f}")
+        logger.info(f"Precision of the model on the {dataset_type} images: {precision:.4f}")
+        logger.info(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
+        logger.info(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
+
+        return accuracy, precision, recall, f1

@@ -39,3 +39,7 @@ model:
   dropout:
     p: 0.5
 
+evaluation:
+  train: True
+  test: True
+  epoch_frequency: 1
