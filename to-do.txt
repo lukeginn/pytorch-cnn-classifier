@@ -7,5 +7,5 @@
 7. Expand the classes to calculate more metrics
 8. Log metrics to something like tensorboard
 9. What about cross-validation?
-10. Put in more configuration options
+10. (DONE) Put in more configuration options
 11. What about testing different architectures

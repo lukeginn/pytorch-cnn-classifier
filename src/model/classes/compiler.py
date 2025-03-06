@@ -22,11 +22,13 @@ class ModelCompiler(nn.Module):
             Purpose: Extracts features from the input image by applying convolution operations.
         conv2 (nn.Conv2d): The second convolutional layer. Similar to conv1 but with different parameters.
             Purpose: Further extracts features from the output of the first convolutional layer.
-        pool (nn.MaxPool2d): The max pooling layer. Applies a 2D max pooling over an input signal composed of several input planes.
+        pool1 (nn.MaxPool2d): The first max pooling layer. Applies a 2D max pooling over an input signal composed of several input planes.
             - kernel_size (int or tuple): Size of the window to take a max over.
             - stride (int or tuple, optional): Stride of the window. Default: kernel_size
             - padding (int or tuple, optional): Implicit zero padding to be added on both sides. Default: 0
             Purpose: Reduces the spatial dimensions (width and height) of the input volume, reducing the number of parameters and computation in the network.
+        pool2 (nn.MaxPool2d): The second max pooling layer. Similar to pool1 but with different parameters.
+            Purpose: Further reduces the spatial dimensions of the input volume.
         fc1 (nn.Linear): The first fully connected layer. Applies a linear transformation to the incoming data.
             - in_features (int): Size of each input sample.
             - out_features (int): Size of each output sample.
@@ -64,14 +66,19 @@ class ModelCompiler(nn.Module):
         self.conv1_kernel_size = config.model.conv1.kernel_size
         self.conv1_stride = config.model.conv1.stride
         self.conv1_padding = config.model.conv1.padding
+        self.pool1_kernel_size = config.model.pool1.kernel_size
+        self.pool1_stride = config.model.pool1.stride
+        self.pool1_padding = config.model.pool1.padding
+
         self.conv2_in_channels = config.model.conv2.in_channels
         self.conv2_out_channels = config.model.conv2.out_channels
         self.conv2_kernel_size = config.model.conv2.kernel_size
         self.conv2_stride = config.model.conv2.stride
         self.conv2_padding = config.model.conv2.padding
-        self.pool_kernel_size = config.model.pool.kernel_size
-        self.pool_stride = config.model.pool.stride
-        self.pool_padding = config.model.pool.padding
+        self.pool2_kernel_size = config.model.pool2.kernel_size
+        self.pool2_stride = config.model.pool2.stride
+        self.pool2_padding = config.model.pool2.padding
+
         self.view_shape_channels = config.model.view_shape.channels
         self.view_shape_height = config.model.view_shape.height
         self.view_shape_width = config.model.view_shape.width
@@ -110,6 +117,12 @@ class ModelCompiler(nn.Module):
             stride=self.conv1_stride,
             padding=self.conv1_padding,
         )
+        self.pool1 = nn.MaxPool2d(
+            kernel_size=self.pool1_kernel_size,
+            stride=self.pool1_stride,
+            padding=self.pool1_padding,
+        )
+
         self.conv2 = nn.Conv2d(
             in_channels=self.conv2_in_channels,
             out_channels=self.conv2_out_channels,
@@ -117,11 +130,12 @@ class ModelCompiler(nn.Module):
             stride=self.conv2_stride,
             padding=self.conv2_padding,
         )
-        self.pool = nn.MaxPool2d(
-            kernel_size=self.pool_kernel_size,
-            stride=self.pool_stride,
-            padding=self.pool_padding,
+        self.pool2 = nn.MaxPool2d(
+            kernel_size=self.pool2_kernel_size,
+            stride=self.pool2_stride,
+            padding=self.pool2_padding,
         )
+
         self.fc1 = nn.Linear(
             in_features=self.fc1_in_features,
             out_features=self.fc1_out_features,
@@ -152,8 +166,8 @@ class ModelCompiler(nn.Module):
             and the total number of elements in the tensor.
         """
         logger.debug("Starting forward pass")
-        x = self.pool(self.activation_function(self.conv1(x)))
-        x = self.pool(self.activation_function(self.conv2(x)))
+        x = self.pool1(self.activation_function(self.conv1(x)))
+        x = self.pool2(self.activation_function(self.conv2(x)))
         x = x.view(
             -1,
             self.view_shape_channels * self.view_shape_height * self.view_shape_width,

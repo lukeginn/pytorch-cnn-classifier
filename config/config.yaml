@@ -18,7 +18,11 @@ model:
     kernel_size: 3
     stride: 1
     padding: 1
-  pool:
+  pool1:
+    kernel_size: 2
+    stride: 2
+    padding: 0
+  pool2:
     kernel_size: 2
     stride: 2
     padding: 0
