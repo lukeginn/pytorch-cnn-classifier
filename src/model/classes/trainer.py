@@ -40,24 +40,9 @@ class ModelTrainer:
             model (nn.Module): The CNN model to be trained and evaluated.
             config (object): The configuration object containing training parameters.
         """
-        self.batch_size = config.model.batch_size
-        self.epochs = config.model.epochs
-        self.evaluate_on_train = config.evaluation.train
-        self.evaluate_on_test = config.evaluation.test
-        self.evaluation_frequency = config.evaluation.epoch_frequency
-        self.log_to_wandb = config.logging.log_to_wandb
-
-        self.model = model
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-        logger.info(
-            f"ModelTrainer initialized with batch size: {self.batch_size} and epochs: {self.epochs}"
-        )
-
-        # Initialize Weights & Biases if logging is enabled
-        if self.log_to_wandb:
-            wandb.init(project=config.logging.project_name, config=config)
-            self.config = wandb.config
+        self._initialize_config(config)
+        self._initialize_model(model)
+        self._initialize_logging(config)
 
     def train(self, train_images, train_labels, test_images, test_labels):
         """
@@ -82,7 +67,7 @@ class ModelTrainer:
             - Logs the average loss for each epoch.
         """
         self.model.train()
-        data_loader = self._create_data_loader(train_images, train_labels)
+        data_loader = self._create_data_loader(train_images, train_labels, self.training_shuffle)
 
         for epoch in range(self.epochs):
             avg_loss = self._train_one_epoch(data_loader)
@@ -92,6 +77,10 @@ class ModelTrainer:
 
             if (epoch + 1) % self.evaluation_frequency == 0:
                 self._evaluate_and_log(train_images, train_labels, test_images, test_labels, epoch)
+
+        if self.log_to_wandb:
+            wandb.finish()
+            logger.info("WandB run has been stopped.")
 
     def evaluate(self, images, labels, dataset_type):
         """
@@ -113,7 +102,7 @@ class ModelTrainer:
             - Computes and logs the accuracy, precision, recall, and F1-score of the model on the dataset.
         """
         self.model.eval()
-        data_loader = self._create_data_loader(images, labels, shuffle=False)
+        data_loader = self._create_data_loader(images, labels, shuffle=self.evaluation_shuffle)
 
         all_labels, all_predictions = self._gather_predictions(data_loader)
 
@@ -122,7 +111,48 @@ class ModelTrainer:
 
         return metrics
 
-    def _create_data_loader(self, images, labels, shuffle=True):
+    def _initialize_config(self, config):
+        """
+        Initializes the configuration settings.
+
+        Args:
+            config (object): The configuration object containing training parameters.
+        """
+        self.batch_size = config.model.batch_size
+        self.epochs = config.model.epochs
+        self.training_shuffle = config.model.shuffle
+        self.evaluate_on_train = config.evaluation.train
+        self.evaluate_on_test = config.evaluation.test
+        self.evaluation_frequency = config.evaluation.epoch_frequency
+        self.evaluation_shuffle = config.evaluation.shuffle
+        self.log_to_wandb = config.logging.log_to_wandb
+
+    def _initialize_model(self, model):
+        """
+        Initializes the model and device settings.
+
+        Args:
+            model (nn.Module): The CNN model to be trained and evaluated.
+        """
+        self.model = model
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+        logger.info(
+            f"ModelTrainer initialized with batch size: {self.batch_size} and epochs: {self.epochs}"
+        )
+
+    def _initialize_logging(self, config):
+        """
+        Initializes logging settings, including Weights & Biases if enabled.
+
+        Args:
+            config (object): The configuration object containing logging parameters.
+        """
+        if self.log_to_wandb:
+            wandb.init(project=config.logging.project_name, config=config)
+            self.config = wandb.config
+
+    def _create_data_loader(self, images, labels, shuffle):
         dataset = TensorDataset(
             torch.tensor(images, dtype=torch.float32),
             torch.tensor(labels, dtype=torch.long),

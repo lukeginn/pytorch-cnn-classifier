@@ -3,7 +3,7 @@
 3. (DONE) Change the type of config loader?
 4. (DONE) Put comments in, explaining each step
 5. (DONE) Put logging in
-6. Brake up the trainer and compiler into more unique private functions
+6. (DONE) Brake up the trainer and compiler into more unique private functions
 7. (DONE) Expand the classes to calculate more metrics
 8. (DONE) Log metrics to something like tensorboard
 9. What about cross-validation?
