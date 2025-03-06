@@ -13,35 +13,13 @@ class ModelCompiler(nn.Module):
 
     Attributes:
         learning_rate (float): The learning rate for the optimizer.
-        conv1 (nn.Conv2d): The first convolutional layer. Applies a 2D convolution over an input signal composed of several input planes.
-            - in_channels (int): Number of channels in the input image.
-            - out_channels (int): Number of channels produced by the convolution.
-            - kernel_size (int or tuple): Size of the convolving kernel. Determines the dimensions of the filter that slides over the input image.
-            - stride (int or tuple, optional): Stride of the convolution. Determines the step size with which the filter moves across the input image. Default: 1
-            - padding (int or tuple, optional): Zero-padding added to both sides of the input. Determines the amount of padding added to the input image to control the spatial dimensions of the output. Default: 0
-            Purpose: Extracts features from the input image by applying convolution operations.
-        conv2 (nn.Conv2d): The second convolutional layer. Similar to conv1 but with different parameters.
-            Purpose: Further extracts features from the output of the first convolutional layer.
-        pool1 (nn.MaxPool2d): The first max pooling layer. Applies a 2D max pooling over an input signal composed of several input planes.
-            - kernel_size (int or tuple): Size of the window to take a max over.
-            - stride (int or tuple, optional): Stride of the window. Default: kernel_size
-            - padding (int or tuple, optional): Implicit zero padding to be added on both sides. Default: 0
-            Purpose: Reduces the spatial dimensions (width and height) of the input volume, reducing the number of parameters and computation in the network.
-        pool2 (nn.MaxPool2d): The second max pooling layer. Similar to pool1 but with different parameters.
-            Purpose: Further reduces the spatial dimensions of the input volume.
-        fc1 (nn.Linear): The first fully connected layer. Applies a linear transformation to the incoming data.
-            - in_features (int): Size of each input sample.
-            - out_features (int): Size of each output sample.
-            Purpose: Maps the flattened input to a higher-dimensional space, enabling the network to learn complex representations.
-        fc2 (nn.Linear): The second fully connected layer. Similar to fc1 but with different parameters.
-            Purpose: Maps the output of the first fully connected layer to the final output classes.
-        dropout (nn.Dropout): The dropout layer. Randomly zeroes some of the elements of the input tensor with probability p using samples from a Bernoulli distribution.
-            - p (float, optional): Probability of an element to be zeroed. Default: 0.5
-            Purpose: Prevents overfitting by randomly setting some of the activations to zero during training.
-        criterion (nn.CrossEntropyLoss): The loss function. Measures the performance of a classification model whose output is a probability value between 0 and 1.
-            Purpose: Computes the loss between the predicted output and the true labels, guiding the optimization process.
-        optimizer (optim.Optimizer): The optimizer. Implements the selected optimization algorithm.
-            Purpose: Updates the model parameters based on the computed gradients to minimize the loss.
+        conv_layers (nn.ModuleList): List of convolutional layers.
+        pool_layers (nn.ModuleList): List of pooling layers.
+        fc1 (nn.Linear): The first fully connected layer.
+        fc2 (nn.Linear): The second fully connected layer.
+        dropout (nn.Dropout): The dropout layer.
+        criterion (nn.CrossEntropyLoss): The loss function.
+        optimizer (optim.Optimizer): The optimizer.
 
     Methods:
         forward(x):
@@ -50,7 +28,6 @@ class ModelCompiler(nn.Module):
                 x (torch.Tensor): Input tensor.
             Returns:
                 torch.Tensor: Output tensor.
-            Purpose: Defines how the input data passes through the network layers to produce the output.
         compile():
             Sets up the loss function and optimizer.
     """
@@ -81,8 +58,7 @@ class ModelCompiler(nn.Module):
             and the total number of elements in the tensor.
         """
         logger.debug("Starting forward pass")
-        x = self._apply_conv_and_pool(x, self.conv1, self.pool1)
-        x = self._apply_conv_and_pool(x, self.conv2, self.pool2)
+        x = self._apply_conv_and_pool_layers(x)
         x = self._flatten(x)
         x = self._apply_fc_layers(x)
         logger.debug("Forward pass completed")
@@ -98,23 +74,9 @@ class ModelCompiler(nn.Module):
     def _load_config(self, config):
         self.learning_rate = config.model.learning_rate
         self.optimizer_name = config.model.optimizer
-        self.conv1_in_channels = config.model.conv1.in_channels
-        self.conv1_out_channels = config.model.conv1.out_channels
-        self.conv1_kernel_size = config.model.conv1.kernel_size
-        self.conv1_stride = config.model.conv1.stride
-        self.conv1_padding = config.model.conv1.padding
-        self.pool1_kernel_size = config.model.pool1.kernel_size
-        self.pool1_stride = config.model.pool1.stride
-        self.pool1_padding = config.model.pool1.padding
 
-        self.conv2_in_channels = config.model.conv2.in_channels
-        self.conv2_out_channels = config.model.conv2.out_channels
-        self.conv2_kernel_size = config.model.conv2.kernel_size
-        self.conv2_stride = config.model.conv2.stride
-        self.conv2_padding = config.model.conv2.padding
-        self.pool2_kernel_size = config.model.pool2.kernel_size
-        self.pool2_stride = config.model.pool2.stride
-        self.pool2_padding = config.model.pool2.padding
+        self.conv_layers_config = config.model.conv_layers
+        self.pool_layers_config = config.model.pool_layers
 
         self.view_shape_channels = config.model.view_shape.channels
         self.view_shape_height = config.model.view_shape.height
@@ -130,31 +92,23 @@ class ModelCompiler(nn.Module):
         self.dropout_p = config.model.dropout.p
 
     def _initialize_layers(self):
-        self.conv1 = nn.Conv2d(
-            in_channels=self.conv1_in_channels,
-            out_channels=self.conv1_out_channels,
-            kernel_size=self.conv1_kernel_size,
-            stride=self.conv1_stride,
-            padding=self.conv1_padding,
-        )
-        self.pool1 = nn.MaxPool2d(
-            kernel_size=self.pool1_kernel_size,
-            stride=self.pool1_stride,
-            padding=self.pool1_padding,
-        )
+        self.conv_layers = nn.ModuleList()
+        for conv_layer in self.conv_layers_config:
+            self.conv_layers.append(nn.Conv2d(
+                in_channels=conv_layer['in_channels'],
+                out_channels=conv_layer['out_channels'],
+                kernel_size=conv_layer['kernel_size'],
+                stride=conv_layer['stride'],
+                padding=conv_layer['padding']
+            ))
 
-        self.conv2 = nn.Conv2d(
-            in_channels=self.conv2_in_channels,
-            out_channels=self.conv2_out_channels,
-            kernel_size=self.conv2_kernel_size,
-            stride=self.conv2_stride,
-            padding=self.conv2_padding,
-        )
-        self.pool2 = nn.MaxPool2d(
-            kernel_size=self.pool2_kernel_size,
-            stride=self.pool2_stride,
-            padding=self.pool2_padding,
-        )
+        self.pool_layers = nn.ModuleList()
+        for pool_layer in self.pool_layers_config:
+            self.pool_layers.append(nn.MaxPool2d(
+                kernel_size=pool_layer['kernel_size'],
+                stride=pool_layer['stride'],
+                padding=pool_layer['padding']
+            ))
 
         self.fc1 = nn.Linear(
             in_features=self.fc1_in_features,
@@ -176,23 +130,10 @@ class ModelCompiler(nn.Module):
             self.activation_function = F.tanh
         else:
             raise ValueError(f"Unsupported activation function: {activation_function}")
-
-    def _set_loss_function(self):
-        self.criterion = nn.CrossEntropyLoss()
-        logger.info("Loss function set to CrossEntropyLoss")
-
-    def _set_optimizer(self):
-        if self.optimizer_name == "Adam":
-            self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        elif self.optimizer_name == "SGD":
-            self.optimizer = optim.SGD(self.parameters(), lr=self.learning_rate)
-        elif self.optimizer_name == "RMSprop":
-            self.optimizer = optim.RMSprop(self.parameters(), lr=self.learning_rate)
-        else:
-            raise ValueError(f"Unsupported optimizer: {self.optimizer_name}")
         
-    def _apply_conv_and_pool(self, x, conv_layer, pool_layer):
-        x = pool_layer(self.activation_function(conv_layer(x)))
+    def _apply_conv_and_pool_layers(self, x):
+        for conv_layer, pool_layer in zip(self.conv_layers, self.pool_layers):
+            x = pool_layer(self.activation_function(conv_layer(x)))
         return x
 
     def _flatten(self, x):
@@ -207,3 +148,19 @@ class ModelCompiler(nn.Module):
         x = self.dropout(x)
         x = self.fc2(x)
         return x
+
+    def _set_loss_function(self):
+        self.criterion = nn.CrossEntropyLoss()
+        logger.info("Loss function set to CrossEntropyLoss")
+
+    def _set_optimizer(self):
+        if self.optimizer_name == "Adam":
+            self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        elif self.optimizer_name == "SGD":
+            self.optimizer = optim.SGD(self.parameters(), lr=self.learning_rate)
+        elif self.optimizer_name == "RMSprop":
+            self.optimizer = optim.RMSprop(self.parameters(), lr=self.learning_rate)
+        else:
+            raise ValueError(f"Unsupported optimizer: {self.optimizer_name}")
+
+
