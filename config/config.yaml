@@ -29,14 +29,13 @@ model:
     channels: 64
     height: 7
     width: 7
-  fc1:
-    in_features: 'As per view_shape (channels * height * width)'
-    out_features: 128
-  fc2:
-    in_features: 128
-    out_features: 10
-  dropout:
-    p: 0.5
+  fc_layers:
+    - out_features: 128
+      dropout: 0.5
+    - out_features: 64
+      dropout: 0.5
+    - out_features: 10
+      dropout: 0.0
 
 evaluation:
   train: True
@@ -45,5 +44,5 @@ evaluation:
   shuffle: True
 
 logging:
-  log_to_wandb: False
+  log_to_wandb: True
   project_name: 'mnist_cnn'

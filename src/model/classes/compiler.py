@@ -13,23 +13,17 @@ class ModelCompiler(nn.Module):
 
     Attributes:
         learning_rate (float): The learning rate for the optimizer.
+        optimizer_name (str): The name of the optimizer.
         conv_layers (nn.ModuleList): List of convolutional layers.
         pool_layers (nn.ModuleList): List of pooling layers.
-        fc1 (nn.Linear): The first fully connected layer.
-        fc2 (nn.Linear): The second fully connected layer.
-        dropout (nn.Dropout): The dropout layer.
+        fc_layers (nn.ModuleList): List of fully connected layers.
+        dropouts (nn.ModuleList): List of dropout layers.
         criterion (nn.CrossEntropyLoss): The loss function.
         optimizer (optim.Optimizer): The optimizer.
-
-    Methods:
-        forward(x):
-            Defines the forward pass of the network.
-            Args:
-                x (torch.Tensor): Input tensor.
-            Returns:
-                torch.Tensor: Output tensor.
-        compile():
-            Sets up the loss function and optimizer.
+        activation_function (callable): The activation function.
+        view_shape_channels (int): Number of channels in the input view shape.
+        view_shape_height (int): Height of the input view shape.
+        view_shape_width (int): Width of the input view shape.
     """
 
     def __init__(self, config):
@@ -48,14 +42,6 @@ class ModelCompiler(nn.Module):
 
         Returns:
             torch.Tensor: Output tensor.
-
-        Purpose:
-            Defines how the input data passes through the network layers to produce the output.
-            The `view` function is used to reshape the tensor `x` before passing it to the fully connected layer `fc1`.
-            This reshaping converts the 4D tensor output from the convolutional layers (batch size, channels, height, width)
-            into a 2D tensor (batch size, number of features) that can be processed by the fully connected layers.
-            The `-1` argument tells PyTorch to infer the size of this dimension automatically based on the other dimensions
-            and the total number of elements in the tensor.
         """
         logger.debug("Starting forward pass")
         x = self._apply_conv_and_pool_layers(x)
@@ -65,6 +51,9 @@ class ModelCompiler(nn.Module):
         return x
 
     def compile(self):
+        """
+        Sets up the loss function and optimizer.
+        """
         self._set_loss_function()
         self._set_optimizer()
         logger.info(
@@ -81,15 +70,7 @@ class ModelCompiler(nn.Module):
         self.view_shape_channels = config.model.view_shape.channels
         self.view_shape_height = config.model.view_shape.height
         self.view_shape_width = config.model.view_shape.width
-        self.fc1_in_features = (
-            config.model.view_shape.channels
-            * config.model.view_shape.height
-            * config.model.view_shape.width
-        )
-        self.fc1_out_features = config.model.fc1.out_features
-        self.fc2_in_features = config.model.fc2.in_features
-        self.fc2_out_features = config.model.fc2.out_features
-        self.dropout_p = config.model.dropout.p
+        self.fc_layers_config = config.model.fc_layers
 
     def _initialize_layers(self):
         self.conv_layers = nn.ModuleList()
@@ -110,15 +91,17 @@ class ModelCompiler(nn.Module):
                 padding=pool_layer['padding']
             ))
 
-        self.fc1 = nn.Linear(
-            in_features=self.fc1_in_features,
-            out_features=self.fc1_out_features,
-        )
-        self.fc2 = nn.Linear(
-            in_features=self.fc2_in_features,
-            out_features=self.fc2_out_features,
-        )
-        self.dropout = nn.Dropout(p=self.dropout_p)
+        self.fc_layers = nn.ModuleList()
+        self.dropouts = nn.ModuleList()
+        in_features = self.view_shape_channels * self.view_shape_height * self.view_shape_width
+        for fc_layer in self.fc_layers_config:
+            self.fc_layers.append(nn.Linear(
+                in_features=in_features,
+                out_features=fc_layer['out_features']
+            ))
+            in_features = fc_layer['out_features']
+            self.dropouts.append(nn.Dropout(p=fc_layer.get('dropout', 0.0)))  # Default to 0.0 if not specified
+
         logger.info("Model layers initialized")
 
     def _set_activation_function(self, activation_function):
@@ -144,9 +127,10 @@ class ModelCompiler(nn.Module):
         return x
 
     def _apply_fc_layers(self, x):
-        x = self.activation_function(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
+        for i, (fc_layer, dropout) in enumerate(zip(self.fc_layers, self.dropouts)):
+            x = self.activation_function(fc_layer(x))
+            if i < len(self.fc_layers) - 1:  # Apply dropout to all but the last layer
+                x = dropout(x)
         return x
 
     def _set_loss_function(self):
