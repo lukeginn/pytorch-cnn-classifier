@@ -45,6 +45,7 @@ class ModelTrainer:
         self.evaluate_on_train = config.evaluation.train
         self.evaluate_on_test = config.evaluation.test
         self.evaluation_frequency = config.evaluation.epoch_frequency
+        self.log_to_wandb = config.logging.log_to_wandb
 
         self.model = model
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -53,9 +54,10 @@ class ModelTrainer:
             f"ModelTrainer initialized with batch size: {self.batch_size} and epochs: {self.epochs}"
         )
 
-        # Initialize Weights & Biases
-        wandb.init(project=config.logging.project_name, config=config)
-        self.config = wandb.config
+        # Initialize Weights & Biases if logging is enabled
+        if self.log_to_wandb:
+            wandb.init(project=config.logging.project_name, config=config)
+            self.config = wandb.config
 
     def train(self, train_images, train_labels, test_images, test_labels):
         """
@@ -80,52 +82,16 @@ class ModelTrainer:
             - Logs the average loss for each epoch.
         """
         self.model.train()
-        train_dataset = TensorDataset(
-            torch.tensor(train_images, dtype=torch.float32),
-            torch.tensor(train_labels, dtype=torch.long),
-        )
-        train_loader = DataLoader(
-            train_dataset, batch_size=self.batch_size, shuffle=True
-        )
+        data_loader = self._create_data_loader(train_images, train_labels)
 
         for epoch in range(self.epochs):
-            running_loss = 0.0
-            for images, labels in train_loader:
-                images, labels = images.to(self.device), labels.to(self.device)
-
-                self.model.optimizer.zero_grad()
-                outputs = self.model(images)
-                loss = self.model.criterion(outputs, labels)
-                loss.backward()
-                self.model.optimizer.step()
-
-                running_loss += loss.item()
-
-            avg_loss = running_loss / len(train_loader)
+            avg_loss = self._train_one_epoch(data_loader)
             logger.info(f"Epoch [{epoch+1}/{self.epochs}], Loss: {avg_loss:.4f}")
-            wandb.log({"epoch": epoch + 1, "loss": avg_loss}, step=epoch + 1)
+            if self.log_to_wandb:
+                wandb.log({"epoch": epoch + 1, "loss": avg_loss}, step=epoch + 1)
 
             if (epoch + 1) % self.evaluation_frequency == 0:
-                if self.evaluate_on_train:
-                    train_accuracy, train_precision, train_recall, train_f1 = self.evaluate(
-                        train_images, train_labels, "train"
-                    )
-                    wandb.log({
-                        "train_accuracy": train_accuracy,
-                        "train_precision": train_precision,
-                        "train_recall": train_recall,
-                        "train_f1": train_f1
-                    }, step=epoch + 1)
-                if self.evaluate_on_test:
-                    test_accuracy, test_precision, test_recall, test_f1 = self.evaluate(
-                        test_images, test_labels, "test"
-                    )
-                    wandb.log({
-                        "test_accuracy": test_accuracy,
-                        "test_precision": test_precision,
-                        "test_recall": test_recall,
-                        "test_f1": test_f1
-                    }, step=epoch + 1)
+                self._evaluate_and_log(train_images, train_labels, test_images, test_labels, epoch)
 
     def evaluate(self, images, labels, dataset_type):
         """
@@ -147,14 +113,53 @@ class ModelTrainer:
             - Computes and logs the accuracy, precision, recall, and F1-score of the model on the dataset.
         """
         self.model.eval()
+        data_loader = self._create_data_loader(images, labels, shuffle=False)
+
+        all_labels, all_predictions = self._gather_predictions(data_loader)
+
+        metrics = self._compute_metrics(all_labels, all_predictions)
+        self._log_evaluation_metrics(metrics, dataset_type)
+
+        return metrics
+
+    def _create_data_loader(self, images, labels, shuffle=True):
         dataset = TensorDataset(
             torch.tensor(images, dtype=torch.float32),
             torch.tensor(labels, dtype=torch.long),
         )
-        data_loader = DataLoader(
-            dataset, batch_size=self.batch_size, shuffle=False
-        )
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle)
 
+    def _train_one_epoch(self, data_loader):
+        running_loss = 0.0
+        for images, labels in data_loader:
+            images, labels = images.to(self.device), labels.to(self.device)
+            self.model.optimizer.zero_grad()
+            outputs = self.model(images)
+            loss = self.model.criterion(outputs, labels)
+            loss.backward()
+            self.model.optimizer.step()
+            running_loss += loss.item()
+        return running_loss / len(data_loader)
+
+    def _evaluate_and_log(self, train_images, train_labels, test_images, test_labels, epoch):
+        if self.evaluate_on_train:
+            train_metrics = self.evaluate(train_images, train_labels, "train")
+            self._log_metrics(train_metrics, "train", epoch)
+        if self.evaluate_on_test:
+            test_metrics = self.evaluate(test_images, test_labels, "test")
+            self._log_metrics(test_metrics, "test", epoch)
+
+    def _log_metrics(self, metrics, dataset_type, epoch):
+        accuracy, precision, recall, f1 = metrics
+        if self.log_to_wandb:
+            wandb.log({
+                f"{dataset_type}_accuracy": accuracy,
+                f"{dataset_type}_precision": precision,
+                f"{dataset_type}_recall": recall,
+                f"{dataset_type}_f1": f1
+            }, step=epoch + 1)
+
+    def _gather_predictions(self, data_loader):
         all_labels = []
         all_predictions = []
         with torch.no_grad():
@@ -164,15 +169,18 @@ class ModelTrainer:
                 _, predicted = torch.max(outputs.data, 1)
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
+        return all_labels, all_predictions
 
-        accuracy = accuracy_score(all_labels, all_predictions)
-        precision = precision_score(all_labels, all_predictions, average="weighted")
-        recall = recall_score(all_labels, all_predictions, average="weighted")
-        f1 = f1_score(all_labels, all_predictions, average="weighted")
+    def _compute_metrics(self, labels, predictions):
+        accuracy = accuracy_score(labels, predictions)
+        precision = precision_score(labels, predictions, average="weighted")
+        recall = recall_score(labels, predictions, average="weighted")
+        f1 = f1_score(labels, predictions, average="weighted")
+        return accuracy, precision, recall, f1
 
+    def _log_evaluation_metrics(self, metrics, dataset_type):
+        accuracy, precision, recall, f1 = metrics
         logger.debug(f"Accuracy of the model on the {dataset_type} images: {accuracy:.4f}")
         logger.debug(f"Precision of the model on the {dataset_type} images: {precision:.4f}")
         logger.debug(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
         logger.debug(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
-
-        return accuracy, precision, recall, f1

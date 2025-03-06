@@ -45,5 +45,5 @@ evaluation:
   epoch_frequency: 1
 
 logging:
+  log_to_wandb: False
   project_name: 'mnist_cnn'
-  
