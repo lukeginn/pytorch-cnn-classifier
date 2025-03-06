@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 import logging as logger
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
-
+import wandb
 
 class ModelTrainer:
     """
@@ -53,6 +53,10 @@ class ModelTrainer:
             f"ModelTrainer initialized with batch size: {self.batch_size} and epochs: {self.epochs}"
         )
 
+        # Initialize Weights & Biases
+        wandb.init(project=config.logging.project_name, config=config)
+        self.config = wandb.config
+
     def train(self, train_images, train_labels, test_images, test_labels):
         """
         Trains the model on the provided training dataset.
@@ -99,16 +103,29 @@ class ModelTrainer:
 
             avg_loss = running_loss / len(train_loader)
             logger.info(f"Epoch [{epoch+1}/{self.epochs}], Loss: {avg_loss:.4f}")
+            wandb.log({"epoch": epoch + 1, "loss": avg_loss}, step=epoch + 1)
 
             if (epoch + 1) % self.evaluation_frequency == 0:
                 if self.evaluate_on_train:
                     train_accuracy, train_precision, train_recall, train_f1 = self.evaluate(
                         train_images, train_labels, "train"
                     )
+                    wandb.log({
+                        "train_accuracy": train_accuracy,
+                        "train_precision": train_precision,
+                        "train_recall": train_recall,
+                        "train_f1": train_f1
+                    }, step=epoch + 1)
                 if self.evaluate_on_test:
                     test_accuracy, test_precision, test_recall, test_f1 = self.evaluate(
                         test_images, test_labels, "test"
                     )
+                    wandb.log({
+                        "test_accuracy": test_accuracy,
+                        "test_precision": test_precision,
+                        "test_recall": test_recall,
+                        "test_f1": test_f1
+                    }, step=epoch + 1)
 
     def evaluate(self, images, labels, dataset_type):
         """
@@ -153,9 +170,9 @@ class ModelTrainer:
         recall = recall_score(all_labels, all_predictions, average="weighted")
         f1 = f1_score(all_labels, all_predictions, average="weighted")
 
-        logger.info(f"Accuracy of the model on the {dataset_type} images: {accuracy:.4f}")
-        logger.info(f"Precision of the model on the {dataset_type} images: {precision:.4f}")
-        logger.info(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
-        logger.info(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
+        logger.debug(f"Accuracy of the model on the {dataset_type} images: {accuracy:.4f}")
+        logger.debug(f"Precision of the model on the {dataset_type} images: {precision:.4f}")
+        logger.debug(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
+        logger.debug(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
 
         return accuracy, precision, recall, f1

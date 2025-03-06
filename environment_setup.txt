@@ -3,3 +3,4 @@ conda activate pytorch-gpu
 pip install torch torchvision torchaudio pyyaml --index-url https://download.pytorch.org/whl/cu118
 pip install scipy
 pip install joblib
+pip install wandb

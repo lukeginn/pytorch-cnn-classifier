@@ -3,3 +3,5 @@ troubleshooting.txt
 *.pyc
 *ubyte*
 *.txt
+*.log
+*wandb*

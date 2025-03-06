@@ -43,3 +43,7 @@ evaluation:
   train: True
   test: True
   epoch_frequency: 1
+
+logging:
+  project_name: 'mnist_cnn'
+  
