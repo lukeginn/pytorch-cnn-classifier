@@ -51,14 +51,51 @@ class ModelCompiler(nn.Module):
             Returns:
                 torch.Tensor: Output tensor.
             Purpose: Defines how the input data passes through the network layers to produce the output.
-
         compile():
             Sets up the loss function and optimizer.
-            Purpose: Initializes the loss function and optimizer for training the model.
     """
 
     def __init__(self, config):
-        # Save the configuration
+        super(ModelCompiler, self).__init__()
+        self._load_config(config)
+        self._initialize_layers()
+        self._set_activation_function(config.model.activation_function)
+        logger.info("Model configuration loaded")
+
+    def forward(self, x):
+        """
+        Defines the forward pass of the network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+
+        Purpose:
+            Defines how the input data passes through the network layers to produce the output.
+            The `view` function is used to reshape the tensor `x` before passing it to the fully connected layer `fc1`.
+            This reshaping converts the 4D tensor output from the convolutional layers (batch size, channels, height, width)
+            into a 2D tensor (batch size, number of features) that can be processed by the fully connected layers.
+            The `-1` argument tells PyTorch to infer the size of this dimension automatically based on the other dimensions
+            and the total number of elements in the tensor.
+        """
+        logger.debug("Starting forward pass")
+        x = self._apply_conv_and_pool(x, self.conv1, self.pool1)
+        x = self._apply_conv_and_pool(x, self.conv2, self.pool2)
+        x = self._flatten(x)
+        x = self._apply_fc_layers(x)
+        logger.debug("Forward pass completed")
+        return x
+
+    def compile(self):
+        self._set_loss_function()
+        self._set_optimizer()
+        logger.info(
+            f"Model compiled with {self.optimizer_name} optimizer and learning rate: {self.learning_rate}"
+        )
+
+    def _load_config(self, config):
         self.learning_rate = config.model.learning_rate
         self.optimizer_name = config.model.optimizer
         self.conv1_in_channels = config.model.conv1.in_channels
@@ -92,24 +129,7 @@ class ModelCompiler(nn.Module):
         self.fc2_out_features = config.model.fc2.out_features
         self.dropout_p = config.model.dropout.p
 
-        # Set up the activation function based on the configuration
-        if config.model.activation_function == "relu":
-            self.activation_function = F.relu
-        elif config.model.activation_function == "sigmoid":
-            self.activation_function = F.sigmoid
-        elif config.model.activation_function == "tanh":
-            self.activation_function = F.tanh
-        else:
-            raise ValueError(
-                f"Unsupported activation function: {config.model.activation_function}"
-            )
-
-        logger.info("Model configuration loaded")
-
-        # Initialize the parent class
-        super(ModelCompiler, self).__init__()
-
-        # Initialize the layers of the CNN using config parameters
+    def _initialize_layers(self):
         self.conv1 = nn.Conv2d(
             in_channels=self.conv1_in_channels,
             out_channels=self.conv1_out_channels,
@@ -147,43 +167,21 @@ class ModelCompiler(nn.Module):
         self.dropout = nn.Dropout(p=self.dropout_p)
         logger.info("Model layers initialized")
 
-    def forward(self, x):
-        """
-        Defines the forward pass of the network.
+    def _set_activation_function(self, activation_function):
+        if activation_function == "relu":
+            self.activation_function = F.relu
+        elif activation_function == "sigmoid":
+            self.activation_function = F.sigmoid
+        elif activation_function == "tanh":
+            self.activation_function = F.tanh
+        else:
+            raise ValueError(f"Unsupported activation function: {activation_function}")
 
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        Purpose:
-            Defines how the input data passes through the network layers to produce the output.
-            The `view` function is used to reshape the tensor `x` before passing it to the fully connected layer `fc1`.
-            This reshaping converts the 4D tensor output from the convolutional layers (batch size, channels, height, width)
-            into a 2D tensor (batch size, number of features) that can be processed by the fully connected layers.
-            The `-1` argument tells PyTorch to infer the size of this dimension automatically based on the other dimensions
-            and the total number of elements in the tensor.
-        """
-        logger.debug("Starting forward pass")
-        x = self.pool1(self.activation_function(self.conv1(x)))
-        x = self.pool2(self.activation_function(self.conv2(x)))
-        x = x.view(
-            -1,
-            self.view_shape_channels * self.view_shape_height * self.view_shape_width,
-        )
-        x = self.activation_function(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
-        logger.debug("Forward pass completed")
-        return x
-
-    def compile(self):
-        # Set up the loss function
+    def _set_loss_function(self):
         self.criterion = nn.CrossEntropyLoss()
         logger.info("Loss function set to CrossEntropyLoss")
 
-        # Set up the optimizer based on the configuration
+    def _set_optimizer(self):
         if self.optimizer_name == "Adam":
             self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         elif self.optimizer_name == "SGD":
@@ -192,7 +190,20 @@ class ModelCompiler(nn.Module):
             self.optimizer = optim.RMSprop(self.parameters(), lr=self.learning_rate)
         else:
             raise ValueError(f"Unsupported optimizer: {self.optimizer_name}")
+        
+    def _apply_conv_and_pool(self, x, conv_layer, pool_layer):
+        x = pool_layer(self.activation_function(conv_layer(x)))
+        return x
 
-        logger.info(
-            f"Model compiled with {self.optimizer_name} optimizer and learning rate: {self.learning_rate}"
+    def _flatten(self, x):
+        x = x.view(
+            -1,
+            self.view_shape_channels * self.view_shape_height * self.view_shape_width,
         )
+        return x
+
+    def _apply_fc_layers(self, x):
+        x = self.activation_function(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
