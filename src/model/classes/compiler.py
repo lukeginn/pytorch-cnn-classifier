@@ -38,7 +38,7 @@ class ModelCompiler(nn.Module):
             Purpose: Prevents overfitting by randomly setting some of the activations to zero during training.
         criterion (nn.CrossEntropyLoss): The loss function. Measures the performance of a classification model whose output is a probability value between 0 and 1.
             Purpose: Computes the loss between the predicted output and the true labels, guiding the optimization process.
-        optimizer (optim.Adam): The optimizer. Implements the Adam algorithm.
+        optimizer (optim.Optimizer): The optimizer. Implements the selected optimization algorithm.
             Purpose: Updates the model parameters based on the computed gradients to minimize the loss.
 
     Methods:
@@ -58,36 +58,127 @@ class ModelCompiler(nn.Module):
     def __init__(self, config):
         # Save the configuration
         self.learning_rate = config.model.learning_rate
-        logger.info(
-            f"Initializing ModelCompiler with learning rate: {self.learning_rate}"
+        self.optimizer_name = config.model.optimizer
+        self.conv1_in_channels = config.model.conv1.in_channels
+        self.conv1_out_channels = config.model.conv1.out_channels
+        self.conv1_kernel_size = config.model.conv1.kernel_size
+        self.conv1_stride = config.model.conv1.stride
+        self.conv1_padding = config.model.conv1.padding
+        self.conv2_in_channels = config.model.conv2.in_channels
+        self.conv2_out_channels = config.model.conv2.out_channels
+        self.conv2_kernel_size = config.model.conv2.kernel_size
+        self.conv2_stride = config.model.conv2.stride
+        self.conv2_padding = config.model.conv2.padding
+        self.pool_kernel_size = config.model.pool.kernel_size
+        self.pool_stride = config.model.pool.stride
+        self.pool_padding = config.model.pool.padding
+        self.view_shape_channels = config.model.view_shape.channels
+        self.view_shape_height = config.model.view_shape.height
+        self.view_shape_width = config.model.view_shape.width
+        self.fc1_in_features = (
+            config.model.view_shape.channels
+            * config.model.view_shape.height
+            * config.model.view_shape.width
         )
+        self.fc1_out_features = config.model.fc1.out_features
+        self.fc2_in_features = config.model.fc2.in_features
+        self.fc2_out_features = config.model.fc2.out_features
+        self.dropout_p = config.model.dropout.p
+
+        # Set up the activation function based on the configuration
+        if config.model.activation_function == "relu":
+            self.activation_function = F.relu
+        elif config.model.activation_function == "sigmoid":
+            self.activation_function = F.sigmoid
+        elif config.model.activation_function == "tanh":
+            self.activation_function = F.tanh
+        else:
+            raise ValueError(
+                f"Unsupported activation function: {config.model.activation_function}"
+            )
+
+        logger.info("Model configuration loaded")
 
         # Initialize the parent class
         super(ModelCompiler, self).__init__()
 
-        # Initialize the layers of the CNN
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-        self.dropout = nn.Dropout(0.5)
+        # Initialize the layers of the CNN using config parameters
+        self.conv1 = nn.Conv2d(
+            in_channels=self.conv1_in_channels,
+            out_channels=self.conv1_out_channels,
+            kernel_size=self.conv1_kernel_size,
+            stride=self.conv1_stride,
+            padding=self.conv1_padding,
+        )
+        self.conv2 = nn.Conv2d(
+            in_channels=self.conv2_in_channels,
+            out_channels=self.conv2_out_channels,
+            kernel_size=self.conv2_kernel_size,
+            stride=self.conv2_stride,
+            padding=self.conv2_padding,
+        )
+        self.pool = nn.MaxPool2d(
+            kernel_size=self.pool_kernel_size,
+            stride=self.pool_stride,
+            padding=self.pool_padding,
+        )
+        self.fc1 = nn.Linear(
+            in_features=self.fc1_in_features,
+            out_features=self.fc1_out_features,
+        )
+        self.fc2 = nn.Linear(
+            in_features=self.fc2_in_features,
+            out_features=self.fc2_out_features,
+        )
+        self.dropout = nn.Dropout(p=self.dropout_p)
         logger.info("Model layers initialized")
 
     def forward(self, x):
-        # Define the forward pass
+        """
+        Defines the forward pass of the network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+
+        Purpose:
+            Defines how the input data passes through the network layers to produce the output.
+            The `view` function is used to reshape the tensor `x` before passing it to the fully connected layer `fc1`.
+            This reshaping converts the 4D tensor output from the convolutional layers (batch size, channels, height, width)
+            into a 2D tensor (batch size, number of features) that can be processed by the fully connected layers.
+            The `-1` argument tells PyTorch to infer the size of this dimension automatically based on the other dimensions
+            and the total number of elements in the tensor.
+        """
         logger.debug("Starting forward pass")
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 64 * 7 * 7)
-        x = F.relu(self.fc1(x))
+        x = self.pool(self.activation_function(self.conv1(x)))
+        x = self.pool(self.activation_function(self.conv2(x)))
+        x = x.view(
+            -1,
+            self.view_shape_channels * self.view_shape_height * self.view_shape_width,
+        )
+        x = self.activation_function(self.fc1(x))
         x = self.dropout(x)
         x = self.fc2(x)
         logger.debug("Forward pass completed")
         return x
 
     def compile(self):
-        # Set up the loss function and optimizer
+        # Set up the loss function
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
-        logger.info("Model compiled with CrossEntropyLoss and Adam optimizer")
+        logger.info("Loss function set to CrossEntropyLoss")
+
+        # Set up the optimizer based on the configuration
+        if self.optimizer_name == "Adam":
+            self.optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        elif self.optimizer_name == "SGD":
+            self.optimizer = optim.SGD(self.parameters(), lr=self.learning_rate)
+        elif self.optimizer_name == "RMSprop":
+            self.optimizer = optim.RMSprop(self.parameters(), lr=self.learning_rate)
+        else:
+            raise ValueError(f"Unsupported optimizer: {self.optimizer_name}")
+
+        logger.info(
+            f"Model compiled with {self.optimizer_name} optimizer and learning rate: {self.learning_rate}"
+        )

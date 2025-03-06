@@ -1,21 +1,37 @@
 random_state: 42
 
 model:
-  learning_rate: 0.0002
   batch_size: 128
   epochs: 100
-  # num_classes: 10
-  # num_batches: 256
-  # batch_size: 128
-  # epochs: 100
-  # starting_epoch: 0
-  # latent_dim: 100
-  # embedding_dim: 50
-  # label_smoothing:
-  #   run: True
-  #   degree: 0.1
-  # learning_rate_decay:
-  #   run: True
-  #   rate: 0.8
-  #   epoch: 10
+  optimizer: Adam
+  learning_rate: 0.001
+  activation_function: relu
+  conv1:
+    in_channels: 1
+    out_channels: 32
+    kernel_size: 3
+    stride: 1
+    padding: 1
+  conv2:
+    in_channels: 32
+    out_channels: 64
+    kernel_size: 3
+    stride: 1
+    padding: 1
+  pool:
+    kernel_size: 2
+    stride: 2
+    padding: 0
+  view_shape:
+    channels: 64
+    height: 7
+    width: 7
+  fc1:
+    in_features: 'As per view_shape (channels * height * width)'
+    out_features: 128
+  fc2:
+    in_features: 128
+    out_features: 10
+  dropout:
+    p: 0.5
 
