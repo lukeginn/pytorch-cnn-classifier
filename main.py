@@ -26,6 +26,7 @@ def main() -> None:
     model.compile()
 
     trainer = ModelTrainer(model, config)
+    trainer.cross_validate(train_images, train_labels)
     trainer.train(train_images, train_labels, test_images, test_labels)
 
     logger.info("Pipeline completed successfully")

@@ -6,6 +6,7 @@
 6. (DONE) Brake up the trainer and compiler into more unique private functions
 7. (DONE) Expand the classes to calculate more metrics
 8. (DONE) Log metrics to something like tensorboard
-9. What about cross-validation?
-10. (DONE) Put in more configuration options
+9. (DONE) Put in more configuration options
+10. What about cross-validation?
 11. What about testing different architectures
+12. What about visualising the model, any packages?

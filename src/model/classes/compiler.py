@@ -107,6 +107,8 @@ class ModelCompiler(nn.Module):
     def _set_activation_function(self, activation_function):
         if activation_function == "relu":
             self.activation_function = F.relu
+        elif activation_function == "leaky_relu":
+            self.activation_function = F.leaky_relu
         elif activation_function == "sigmoid":
             self.activation_function = F.sigmoid
         elif activation_function == "tanh":

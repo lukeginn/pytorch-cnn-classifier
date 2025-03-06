@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import logging as logger
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import wandb
+from sklearn.model_selection import KFold, ParameterGrid
 
 class ModelTrainer:
     """
@@ -111,6 +112,43 @@ class ModelTrainer:
 
         return metrics
 
+    def cross_validate(self, images, labels):
+        """
+        Performs k-fold cross-validation on the provided dataset.
+
+        Args:
+            images (numpy.ndarray): The images for cross-validation.
+            labels (numpy.ndarray): The labels corresponding to the images.
+            k_folds (int): The number of folds for cross-validation.
+
+        Purpose:
+            - Splits the dataset into k folds.
+            - Trains and evaluates the model on each fold.
+            - Logs the average metrics across all folds.
+        """
+        original_log_to_wandb = self.log_to_wandb
+        self.log_to_wandb = False  # Disable wandb logging for cross-validation
+
+        kf = KFold(n_splits=self.k_folds, shuffle=self.cross_validation_shuffle)
+        fold_metrics = []
+
+        for fold, (train_index, val_index) in enumerate(kf.split(images)):
+            logger.info(f"Fold {fold+1}/{self.k_folds}")
+
+            train_images, val_images = images[train_index], images[val_index]
+            train_labels, val_labels = labels[train_index], labels[val_index]
+
+            self.train(train_images, train_labels, val_images, val_labels)
+            metrics = self.evaluate(val_images, val_labels, dataset_type=f"fold_{fold+1}")
+            fold_metrics.append(metrics)
+
+        avg_metrics = self._compute_average_metrics(fold_metrics)
+        self._log_cross_validation_metrics(avg_metrics, self.k_folds)
+
+        self.log_to_wandb = original_log_to_wandb  # Re-enable wandb logging after cross-validation
+
+        return avg_metrics
+
     def _initialize_config(self, config):
         """
         Initializes the configuration settings.
@@ -118,13 +156,19 @@ class ModelTrainer:
         Args:
             config (object): The configuration object containing training parameters.
         """
+        self.config = config
         self.batch_size = config.model.batch_size
         self.epochs = config.model.epochs
+        self.learning_rate = config.model.learning_rate
+        self.optimizer = config.model.optimizer
+        self.activation_function = config.model.activation_function
         self.training_shuffle = config.model.shuffle
         self.evaluate_on_train = config.evaluation.train
         self.evaluate_on_test = config.evaluation.test
         self.evaluation_frequency = config.evaluation.epoch_frequency
         self.evaluation_shuffle = config.evaluation.shuffle
+        self.k_folds = config.cross_validation.k_folds
+        self.cross_validation_shuffle = config.cross_validation.shuffle
         self.log_to_wandb = config.logging.log_to_wandb
 
     def _initialize_model(self, model):
@@ -214,3 +258,42 @@ class ModelTrainer:
         logger.debug(f"Precision of the model on the {dataset_type} images: {precision:.4f}")
         logger.debug(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
         logger.debug(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
+
+    def _compute_average_metrics(self, fold_metrics):
+        """
+        Computes the average metrics across all folds.
+
+        Args:
+            fold_metrics (list): A list of metrics for each fold.
+
+        Returns:
+            tuple: The average accuracy, precision, recall, and F1-score.
+        """
+        avg_accuracy = sum([metrics[0] for metrics in fold_metrics]) / len(fold_metrics)
+        avg_precision = sum([metrics[1] for metrics in fold_metrics]) / len(fold_metrics)
+        avg_recall = sum([metrics[2] for metrics in fold_metrics]) / len(fold_metrics)
+        avg_f1 = sum([metrics[3] for metrics in fold_metrics]) / len(fold_metrics)
+        return avg_accuracy, avg_precision, avg_recall, avg_f1
+
+    def _log_cross_validation_metrics(self, metrics, k_folds):
+        """
+        Logs the average metrics across all folds.
+
+        Args:
+            metrics (tuple): The average accuracy, precision, recall, and F1-score.
+            k_folds (int): The number of folds for cross-validation.
+        """
+        accuracy, precision, recall, f1 = metrics
+        logger.info(f"Cross-Validation with {k_folds} folds:")
+        logger.info(f"Average Accuracy: {accuracy:.4f}")
+        logger.info(f"Average Precision: {precision:.4f}")
+        logger.info(f"Average Recall: {recall:.4f}")
+        logger.info(f"Average F1 Score: {f1:.4f}")
+
+        if self.log_to_wandb:
+            wandb.log({
+                "cv_average_accuracy": accuracy,
+                "cv_average_precision": precision,
+                "cv_average_recall": recall,
+                "cv_average_f1": f1
+            })
