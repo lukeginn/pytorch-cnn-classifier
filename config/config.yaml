@@ -50,11 +50,11 @@ cross_validation:
   param_grid:
     shuffle: [True]
     batch_size: [2048]
-    epochs: [5]
+    epochs: [5, 10]
     learning_rate: [0.001]
     optimizer: [Adam]
     activation_function: [relu]
-    dropout: [0.0, 0.3]
+    dropout: [0.0, 0.1]
 
 logging:
   log_to_wandb: False

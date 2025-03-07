@@ -3,6 +3,8 @@ import itertools
 from src.model.classes.trainer import ModelTrainer
 from src.model.classes.compiler import ModelCompiler
 import logging as logger
+from config.paths import Paths
+
 
 class HyperparameterTuner:
     def __init__(self, config):
@@ -13,7 +15,7 @@ class HyperparameterTuner:
     def tune(self, train_images, train_labels):
         logger.info("Starting hyperparameter tuning")
 
-        best_score = float('-inf')
+        best_score = float("-inf")
         best_params = None
         params_list = []
         scores_list = []
@@ -22,7 +24,7 @@ class HyperparameterTuner:
             logger.info(f"Training with params: {params}")
 
             self._set_config(params)
-            score = self._train_and_evaluate(train_images, train_labels)
+            score = self._compile_train_and_evaluate(train_images, train_labels)
             score_to_compare = score[self.metric_to_optimize]
 
             params_list.append(params)
@@ -36,8 +38,6 @@ class HyperparameterTuner:
 
         logger.info("Hyperparameter tuning completed")
         logger.info(f"Best params: {best_params}, Best score: {best_score}")
-        logger.info(f"Cross-validation results table: {results_table}")
-
         self._set_config(best_params)
 
         return best_params, best_score, results_table, self.config
@@ -48,17 +48,17 @@ class HyperparameterTuner:
             yield dict(zip(keys, combination))
 
     def _set_config(self, params):
-        self.config.model.shuffle = params['shuffle']
-        self.config.model.batch_size = params['batch_size']
-        self.config.model.epochs = params['epochs']
-        self.config.model.learning_rate = params['learning_rate']
-        self.config.model.optimizer = params['optimizer']
-        self.config.model.activation_function = params['activation_function']
-        for i, layer in enumerate(self.config['model']['fc_layers']):
-            if 'dropout' in layer and i != len(self.config['model']['fc_layers']) - 1:
-                layer['dropout'] = params['dropout']
+        self.config["model"]["shuffle"] = params["shuffle"]
+        self.config["model"]["batch_size"] = params["batch_size"]
+        self.config["model"]["epochs"] = params["epochs"]
+        self.config["model"]["learning_rate"] = params["learning_rate"]
+        self.config["model"]["optimizer"] = params["optimizer"]
+        self.config["model"]["activation_function"] = params["activation_function"]
+        for i, layer in enumerate(self.config["model"]["fc_layers"]):
+            if "dropout" in layer and i != len(self.config["model"]["fc_layers"]) - 1:
+                layer["dropout"] = params["dropout"]
 
-    def _train_and_evaluate(self, train_images, train_labels):
+    def _compile_train_and_evaluate(self, train_images, train_labels):
         model = ModelCompiler(self.config)
         model.compile()
         trainer = ModelTrainer(model, self.config, False)
@@ -67,4 +67,13 @@ class HyperparameterTuner:
     def _create_results_table(self, params_list, scores_list):
         params_df = pd.DataFrame(params_list)
         scores_df = pd.DataFrame(scores_list)
-        return pd.concat([params_df, scores_df], axis=1)
+
+        results_table = pd.concat([params_df, scores_df], axis=1)
+        logger.info(f"Cross-validation results table: {results_table}")
+
+        logger.info(
+            f"Saving cross-validation results to {Paths.CROSS_VALIDATION_RESULTS_PATH.value}"
+        )
+        results_table.to_csv(Paths.CROSS_VALIDATION_RESULTS_PATH.value, index=False)
+
+        return results_table

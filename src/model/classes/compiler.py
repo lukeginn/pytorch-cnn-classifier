@@ -75,32 +75,41 @@ class ModelCompiler(nn.Module):
     def _initialize_layers(self):
         self.conv_layers = nn.ModuleList()
         for conv_layer in self.conv_layers_config:
-            self.conv_layers.append(nn.Conv2d(
-                in_channels=conv_layer['in_channels'],
-                out_channels=conv_layer['out_channels'],
-                kernel_size=conv_layer['kernel_size'],
-                stride=conv_layer['stride'],
-                padding=conv_layer['padding']
-            ))
+            self.conv_layers.append(
+                nn.Conv2d(
+                    in_channels=conv_layer["in_channels"],
+                    out_channels=conv_layer["out_channels"],
+                    kernel_size=conv_layer["kernel_size"],
+                    stride=conv_layer["stride"],
+                    padding=conv_layer["padding"],
+                )
+            )
 
         self.pool_layers = nn.ModuleList()
         for pool_layer in self.pool_layers_config:
-            self.pool_layers.append(nn.MaxPool2d(
-                kernel_size=pool_layer['kernel_size'],
-                stride=pool_layer['stride'],
-                padding=pool_layer['padding']
-            ))
+            self.pool_layers.append(
+                nn.MaxPool2d(
+                    kernel_size=pool_layer["kernel_size"],
+                    stride=pool_layer["stride"],
+                    padding=pool_layer["padding"],
+                )
+            )
 
         self.fc_layers = nn.ModuleList()
         self.dropouts = nn.ModuleList()
-        in_features = self.view_shape_channels * self.view_shape_height * self.view_shape_width
+        in_features = (
+            self.view_shape_channels * self.view_shape_height * self.view_shape_width
+        )
         for fc_layer in self.fc_layers_config:
-            self.fc_layers.append(nn.Linear(
-                in_features=in_features,
-                out_features=fc_layer['out_features']
-            ))
-            in_features = fc_layer['out_features']
-            self.dropouts.append(nn.Dropout(p=fc_layer.get('dropout', 0.0)))  # Default to 0.0 if not specified
+            self.fc_layers.append(
+                nn.Linear(
+                    in_features=in_features, out_features=fc_layer["out_features"]
+                )
+            )
+            in_features = fc_layer["out_features"]
+            self.dropouts.append(
+                nn.Dropout(p=fc_layer.get("dropout", 0.0))
+            )  # Default to 0.0 if not specified
 
         logger.info("Model layers initialized")
 
@@ -115,7 +124,7 @@ class ModelCompiler(nn.Module):
             self.activation_function = F.tanh
         else:
             raise ValueError(f"Unsupported activation function: {activation_function}")
-        
+
     def _apply_conv_and_pool_layers(self, x):
         for conv_layer, pool_layer in zip(self.conv_layers, self.pool_layers):
             x = pool_layer(self.activation_function(conv_layer(x)))
@@ -148,5 +157,3 @@ class ModelCompiler(nn.Module):
             self.optimizer = optim.RMSprop(self.parameters(), lr=self.learning_rate)
         else:
             raise ValueError(f"Unsupported optimizer: {self.optimizer_name}")
-
-

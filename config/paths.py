@@ -11,6 +11,8 @@ class Paths(Enum):
     INPUTS_PATH = BASE_PATH / "inputs"
     OUTPUTS_PATH = BASE_PATH / "outputs"
 
+    CROSS_VALIDATION_RESULTS_PATH = OUTPUTS_PATH / "cross_validation_results.csv"
+
 
 def create_directories():
     for path in Paths:

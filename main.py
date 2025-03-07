@@ -1,4 +1,3 @@
-from config import paths
 from src.utils.setup import Setup
 from src.data.reader import DataReader
 from src.data.processor import DataProcessor
@@ -10,6 +9,7 @@ import warnings
 
 logger.basicConfig(level=logger.INFO)
 warnings.filterwarnings("ignore")
+
 
 def main() -> None:
     """Main function to run the data processing and model pipeline."""
@@ -23,8 +23,10 @@ def main() -> None:
     train_images, train_labels, test_images, test_labels = DataProcessor.run(data)
 
     tuner = HyperparameterTuner(config)
-    best_params, best_score, results_table, config = tuner.tune(train_images, train_labels)
-
+    best_params, best_score, results_table, config = tuner.tune(
+        train_images, train_labels
+    )
+    
     model = ModelCompiler(config)
     model.compile()
 
@@ -32,6 +34,7 @@ def main() -> None:
     trainer.train(train_images, train_labels, test_images, test_labels)
 
     logger.info("Pipeline completed successfully")
+
 
 if __name__ == "__main__":
     main()
