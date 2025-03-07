@@ -55,24 +55,6 @@ class ModelTrainerUtils:
         return scores
 
     @staticmethod
-    def initialize_config(config):
-        return {
-            "batch_size": config.model.batch_size,
-            "epochs": config.model.epochs,
-            "learning_rate": config.model.learning_rate,
-            "optimizer": config.model.optimizer,
-            "activation_function": config.model.activation_function,
-            "training_shuffle": config.model.shuffle,
-            "evaluate_on_train": config.evaluation.train,
-            "evaluate_on_test": config.evaluation.test,
-            "evaluation_frequency": config.evaluation.epoch_frequency,
-            "evaluation_shuffle": config.evaluation.shuffle,
-            "k_folds": config.cross_validation.k_folds,
-            "cross_validation_shuffle": config.cross_validation.shuffle,
-            "log_to_wandb": config.logging.log_to_wandb,
-        }
-
-    @staticmethod
     def initialize_model(model):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
@@ -86,7 +68,6 @@ class ModelTrainerUtils:
                 project=config.logging.project_name, config=config, name=experiment_name
             )
             return wandb.config
-        return config
 
     @staticmethod
     def train_one_epoch(model, data_loader, device):

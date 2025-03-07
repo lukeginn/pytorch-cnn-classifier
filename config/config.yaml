@@ -45,16 +45,16 @@ evaluation:
 
 cross_validation:
   tune: True
-  k_folds: 3
+  k_folds: 5
   shuffle: True
   metric_to_optimize: average_accuracy
   param_grid:
     shuffle: [True]
     batch_size: [2048]
-    epochs: [40, 50, 60, 70, 80]
+    epochs: [40]
     learning_rate: [0.001]
     optimizer: [Adam]
-    activation_function: [relu]
+    activation_function: [tanh]
     dropout: [0.20]
 
 logging:

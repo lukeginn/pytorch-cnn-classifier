@@ -47,18 +47,9 @@ class ModelTrainer:
             model (nn.Module): The CNN model to be trained and evaluated.
             config (object): The configuration object containing training parameters.
         """
-        self.config = ModelTrainerUtils.initialize_config(config)
+        self._initialize_config(config)
         self.model, self.device = ModelTrainerUtils.initialize_model(model)
-        self.config = ModelTrainerUtils.initialize_logging(config)
-
-        self.log_to_wandb = self.config["logging"]["log_to_wandb"]
-        self.batch_size = self.config["model"]["batch_size"]
-        self.epochs = self.config["model"]["epochs"]
-        self.training_shuffle = self.config["model"]["shuffle"]
-        self.evaluation_shuffle = self.config["evaluation"]["shuffle"]
-        self.evaluation_frequency = self.config["evaluation"]["epoch_frequency"]
-        self.k_folds = config["cross_validation"]["k_folds"]
-        self.cross_validation_shuffle = config["cross_validation"]["shuffle"]
+        wandb.config = ModelTrainerUtils.initialize_logging(config)
 
     def train(self, train_images, train_labels, test_images, test_labels):
         """
@@ -172,3 +163,14 @@ class ModelTrainer:
         )
 
         return avg_metrics
+    
+    def _initialize_config(self, config):
+
+        self.log_to_wandb = config["logging"]["log_to_wandb"]
+        self.batch_size = config["model"]["batch_size"]
+        self.epochs = config["model"]["epochs"]
+        self.training_shuffle = config["model"]["shuffle"]
+        self.evaluation_shuffle = config["evaluation"]["shuffle"]
+        self.evaluation_frequency = config["evaluation"]["epoch_frequency"]
+        self.k_folds = config["cross_validation"]["k_folds"]
+        self.cross_validation_shuffle = config["cross_validation"]["shuffle"]

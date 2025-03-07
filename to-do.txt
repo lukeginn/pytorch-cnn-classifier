@@ -8,10 +8,10 @@
 8. (DONE) Log metrics to something like tensorboard
 9. (DONE) Put in more configuration options
 10. (DONE) What about cross-validation?
-11. What about testing different architectures
+11. (DONE) What about testing different architectures
 12. (DONE) What about visualising the model, any packages?
 13. (DONE) wandb experiment name is based on the date
 14. (DONE) Output the cross-validation results as a csv file in outputs
 15. (NOT DONE) Get black formatting working again
 16. (DONE) Bug in epoch not overwriting
-17. Make the visualisation code go to a compile utils clss
+17. (DON) Make the visualisation code go to a compile utils clss
