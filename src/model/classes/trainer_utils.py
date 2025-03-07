@@ -5,6 +5,7 @@ import logging as logger
 import wandb
 import time
 
+
 class ModelTrainerUtils:
     @staticmethod
     def create_data_loader(images, labels, batch_size, shuffle):
@@ -38,7 +39,9 @@ class ModelTrainerUtils:
     @staticmethod
     def compute_average_metrics(fold_metrics):
         avg_accuracy = sum([metrics[0] for metrics in fold_metrics]) / len(fold_metrics)
-        avg_precision = sum([metrics[1] for metrics in fold_metrics]) / len(fold_metrics)
+        avg_precision = sum([metrics[1] for metrics in fold_metrics]) / len(
+            fold_metrics
+        )
         avg_recall = sum([metrics[2] for metrics in fold_metrics]) / len(fold_metrics)
         avg_f1 = sum([metrics[3] for metrics in fold_metrics]) / len(fold_metrics)
 
@@ -99,10 +102,12 @@ class ModelTrainerUtils:
         return running_loss / len(data_loader)
 
     @staticmethod
-    def evaluate_and_log(trainer, train_images, train_labels, test_images, test_labels, epoch):
+    def evaluate_and_log(
+        trainer, train_images, train_labels, test_images, test_labels, epoch
+    ):
         train_metrics = trainer.evaluate(train_images, train_labels, "train")
         ModelTrainerUtils.log_metrics(trainer, train_metrics, "train", epoch)
-        
+
         test_metrics = trainer.evaluate(test_images, test_labels, "test")
         ModelTrainerUtils.log_metrics(trainer, test_metrics, "test", epoch)
 
@@ -138,7 +143,9 @@ class ModelTrainerUtils:
         train_labels, val_labels = labels[train_index], labels[val_index]
 
         trainer.train(train_images, train_labels, val_images, val_labels)
-        metrics = trainer.evaluate(val_images, val_labels, dataset_type=f"fold_{fold+1}")
+        metrics = trainer.evaluate(
+            val_images, val_labels, dataset_type=f"fold_{fold+1}"
+        )
         return metrics
 
     @staticmethod

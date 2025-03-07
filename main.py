@@ -22,13 +22,15 @@ def main() -> None:
     data = DataReader.load_data()
     train_images, train_labels, test_images, test_labels = DataProcessor.run(data)
 
-    tuner = HyperparameterTuner(config)
-    best_params, best_score, results_table, config = tuner.tune(
-        train_images, train_labels
-    )
-    
+    if config.cross_validation.tune:
+        tuner = HyperparameterTuner(config)
+        best_params, best_score, results_table, config = tuner.tune(
+            train_images, train_labels
+        )
+
     model = ModelCompiler(config)
     model.compile()
+    model.visualize()
 
     trainer = ModelTrainer(model, config, log_to_wandb=config.logging.log_to_wandb)
     trainer.train(train_images, train_labels, test_images, test_labels)

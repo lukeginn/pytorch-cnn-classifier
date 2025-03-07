@@ -2,6 +2,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import logging as logger
+import torch
+from torchviz import make_dot
+from config.paths import Paths
 
 
 class ModelCompiler(nn.Module):
@@ -58,6 +61,31 @@ class ModelCompiler(nn.Module):
         self._set_optimizer()
         logger.info(
             f"Model compiled with {self.optimizer_name} optimizer and learning rate: {self.learning_rate}"
+        )
+
+    def visualize(self):
+        """
+        Visualizes the model architecture.
+
+        Args:
+            input_size (tuple): The size of the input tensor (e.g., (1, 1, 28, 28) for MNIST).
+        """
+        x = torch.randn((1, 1, 28, 28))
+
+        y = self.forward(x)
+
+        path = str(Paths.MODEL_ARCHITECTURE_PATH.value).rsplit(".", 1)[0]
+        dot = make_dot(y, params=dict(self.named_parameters()))
+
+        # Customize graph attributes
+        dot.graph_attr.update(dpi="300")  # Left to Right layout and increase DPI
+        dot.node_attr.update(shape="box", style="filled", fillcolor="lightblue")
+        dot.edge_attr.update(color="gray")
+
+        dot.render(path, format="png")
+
+        logger.info(
+            f"Model architecture saved to {Paths.MODEL_ARCHITECTURE_PATH.value}"
         )
 
     def _load_config(self, config):

@@ -51,15 +51,14 @@ class ModelTrainer:
         self.model, self.device = ModelTrainerUtils.initialize_model(model)
         self.config = ModelTrainerUtils.initialize_logging(config)
 
-        self.log_to_wandb = self.config.logging.log_to_wandb
-
-        self.batch_size = self.config.model.batch_size
-        self.epochs = self.config.model.epochs
-        self.training_shuffle = self.config.model.shuffle
-        self.evaluation_shuffle = self.config.evaluation.shuffle
-        self.evaluation_frequency = self.config.evaluation.epoch_frequency
-        self.k_folds = config.cross_validation.k_folds
-        self.cross_validation_shuffle = config.cross_validation.shuffle
+        self.log_to_wandb = self.config["logging"]["log_to_wandb"]
+        self.batch_size = self.config["model"]["batch_size"]
+        self.epochs = self.config["model"]["epochs"]
+        self.training_shuffle = self.config["model"]["shuffle"]
+        self.evaluation_shuffle = self.config["evaluation"]["shuffle"]
+        self.evaluation_frequency = self.config["evaluation"]["epoch_frequency"]
+        self.k_folds = config["cross_validation"]["k_folds"]
+        self.cross_validation_shuffle = config["cross_validation"]["shuffle"]
 
     def train(self, train_images, train_labels, test_images, test_labels):
         """
@@ -89,7 +88,9 @@ class ModelTrainer:
         )
 
         for epoch in range(self.epochs):
-            avg_loss = ModelTrainerUtils.train_one_epoch(self.model, data_loader, self.device)
+            avg_loss = ModelTrainerUtils.train_one_epoch(
+                self.model, data_loader, self.device
+            )
             logger.info(f"Epoch [{epoch+1}/{self.epochs}], Loss: {avg_loss:.4f}")
             if self.log_to_wandb:
                 wandb.log({"epoch": epoch + 1, "loss": avg_loss}, step=epoch + 1)

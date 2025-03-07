@@ -5,3 +5,4 @@ troubleshooting.txt
 *.txt
 *.log
 *wandb*
+outputs/model_architecture

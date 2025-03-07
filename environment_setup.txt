@@ -6,3 +6,4 @@ pip install joblib
 pip install wandb
 pip install pandas
 pip install black
+pip install torchviz

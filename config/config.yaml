@@ -44,18 +44,19 @@ evaluation:
   shuffle: True
 
 cross_validation:
-  k_folds: 3
+  tune: False
+  k_folds: 5
   shuffle: True
   metric_to_optimize: average_accuracy
   param_grid:
     shuffle: [True]
     batch_size: [2048]
-    epochs: [5, 10]
+    epochs: [5]
     learning_rate: [0.001]
     optimizer: [Adam]
     activation_function: [relu]
-    dropout: [0.0, 0.1]
+    dropout: [0.0, 0.5]
 
 logging:
-  log_to_wandb: False
+  log_to_wandb: True
   project_name: 'mnist_cnn'
