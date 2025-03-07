@@ -1,4 +1,3 @@
-
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import logging as logger
@@ -141,12 +140,7 @@ class ModelTrainer:
 
         for fold, (train_index, val_index) in enumerate(kf.split(images)):
             logger.info(f"Fold {fold+1}/{self.k_folds}")
-
-            train_images, val_images = images[train_index], images[val_index]
-            train_labels, val_labels = labels[train_index], labels[val_index]
-
-            self.train(train_images, train_labels, val_images, val_labels)
-            metrics = self.evaluate(val_images, val_labels, dataset_type=f"fold_{fold+1}")
+            metrics = self._train_and_evaluate_fold(images, labels, train_index, val_index, fold)
             fold_metrics.append(metrics)
 
         avg_metrics = self._compute_average_metrics(fold_metrics)
@@ -266,6 +260,27 @@ class ModelTrainer:
         logger.debug(f"Recall of the model on the {dataset_type} images: {recall:.4f}")
         logger.debug(f"F1 Score of the model on the {dataset_type} images: {f1:.4f}")
 
+    def _train_and_evaluate_fold(self, images, labels, train_index, val_index, fold):
+        """
+        Trains and evaluates the model on a single fold.
+
+        Args:
+            images (numpy.ndarray): The images for cross-validation.
+            labels (numpy.ndarray): The labels corresponding to the images.
+            train_index (array-like): The indices for the training set.
+            val_index (array-like): The indices for the validation set.
+            fold (int): The current fold number.
+
+        Returns:
+            tuple: The metrics for the current fold.
+        """
+        train_images, val_images = images[train_index], images[val_index]
+        train_labels, val_labels = labels[train_index], labels[val_index]
+
+        self.train(train_images, train_labels, val_images, val_labels)
+        metrics = self.evaluate(val_images, val_labels, dataset_type=f"fold_{fold+1}")
+        return metrics
+
     def _compute_average_metrics(self, fold_metrics):
         """
         Computes the average metrics across all folds.
@@ -274,7 +289,7 @@ class ModelTrainer:
             fold_metrics (list): A list of metrics for each fold.
 
         Returns:
-            tuple: The average accuracy, precision, recall, and F1-score.
+            dict: The average accuracy, precision, recall, and F1-score.
         """
         avg_accuracy = sum([metrics[0] for metrics in fold_metrics]) / len(fold_metrics)
         avg_precision = sum([metrics[1] for metrics in fold_metrics]) / len(fold_metrics)
@@ -295,7 +310,7 @@ class ModelTrainer:
         Logs the average metrics across all folds.
 
         Args:
-            metrics (tuple): The average accuracy, precision, recall, and F1-score.
+            metrics (dict): The average accuracy, precision, recall, and F1-score.
             k_folds (int): The number of folds for cross-validation.
         """
         accuracy = metrics['average_accuracy']

@@ -7,7 +7,8 @@
 7. (DONE) Expand the classes to calculate more metrics
 8. (DONE) Log metrics to something like tensorboard
 9. (DONE) Put in more configuration options
-10. What about cross-validation?
+10. (DONE) What about cross-validation?
 11. What about testing different architectures
 12. What about visualising the model, any packages?
 13. wandb experiment name is based on the date
+14. Output the cross-validation results as a csv file in outputs
