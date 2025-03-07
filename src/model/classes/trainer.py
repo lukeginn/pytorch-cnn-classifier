@@ -1,9 +1,16 @@
+
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import logging as logger
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import wandb
-from sklearn.model_selection import KFold, ParameterGrid
+from sklearn.model_selection import KFold
+import numpy as np
+# A bug was found in the numpy library that causes the int and bool types to be overwritten.
+# This code snippet is a workaround to fix the issue.
+np.int = int
+np.bool = bool
+
 
 class ModelTrainer:
     """
@@ -33,7 +40,7 @@ class ModelTrainer:
             Purpose: Computes the accuracy of the model on the test dataset.
     """
 
-    def __init__(self, model, config):
+    def __init__(self, model, config, log_to_wandb):
         """
         Initializes the ModelTrainer with the model and configuration.
 
@@ -273,7 +280,15 @@ class ModelTrainer:
         avg_precision = sum([metrics[1] for metrics in fold_metrics]) / len(fold_metrics)
         avg_recall = sum([metrics[2] for metrics in fold_metrics]) / len(fold_metrics)
         avg_f1 = sum([metrics[3] for metrics in fold_metrics]) / len(fold_metrics)
-        return avg_accuracy, avg_precision, avg_recall, avg_f1
+
+        scores = {
+            "average_accuracy": avg_accuracy,
+            "average_precision": avg_precision,
+            "average_recall": avg_recall,
+            "average_f1": avg_f1
+        }
+
+        return scores
 
     def _log_cross_validation_metrics(self, metrics, k_folds):
         """
@@ -283,7 +298,11 @@ class ModelTrainer:
             metrics (tuple): The average accuracy, precision, recall, and F1-score.
             k_folds (int): The number of folds for cross-validation.
         """
-        accuracy, precision, recall, f1 = metrics
+        accuracy = metrics['average_accuracy']
+        precision = metrics['average_precision']
+        recall = metrics['average_recall']
+        f1 = metrics['average_f1']
+
         logger.info(f"Cross-Validation with {k_folds} folds:")
         logger.info(f"Average Accuracy: {accuracy:.4f}")
         logger.info(f"Average Precision: {precision:.4f}")

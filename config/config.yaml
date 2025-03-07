@@ -2,40 +2,40 @@ random_state: 42
 
 model:
   shuffle: True
-  batch_size: [1024, 2048]
-  epochs: [5, 10]
-  learning_rate: [0.001, 0.0001]
-  optimizer: [Adam, SGD]
-  activation_function: [relu, leaky_relu]
+  batch_size: 2048
+  epochs: 10
+  learning_rate: 0.001
+  optimizer: Adam
+  activation_function: relu
   conv_layers:
-    - in_channels: [1]
-      out_channels: [32, 64]
-      kernel_size: [3, 5]
-      stride: [1]
-      padding: [1]
-    - in_channels: [32, 64]
-      out_channels: [64, 128]
-      kernel_size: [3, 5]
-      stride: [1]
-      padding: [1]
+    - in_channels: 1
+      out_channels: 32
+      kernel_size: 3
+      stride: 1
+      padding: 1
+    - in_channels: 32
+      out_channels: 64
+      kernel_size: 3
+      stride: 1
+      padding: 1
   pool_layers:
-    - kernel_size: [2, 3]
-      stride: [2]
-      padding: [0]
-    - kernel_size: [2, 3]
-      stride: [2]
-      padding: [0]
+    - kernel_size: 2
+      stride: 2
+      padding: 0
+    - kernel_size: 2
+      stride: 2
+      padding: 0
   view_shape:
-    channels: [64, 128]
-    height: [7]
-    width: [7]
+    channels: 64
+    height: 7
+    width: 7
   fc_layers:
-    - out_features: [128, 256]
-      dropout: [0.5, 0.3]
-    - out_features: [64, 128]
-      dropout: [0.5, 0.3]
-    - out_features: [10]
-      dropout: [0.0]
+    - out_features: 128
+      dropout: 0.5
+    - out_features: 64
+      dropout: 0.5
+    - out_features: 10
+      dropout: 0.0
 
 evaluation:
   train: True
@@ -46,7 +46,16 @@ evaluation:
 cross_validation:
   k_folds: 3
   shuffle: True
+  metric_to_optimize: average_accuracy
+  param_grid:
+    shuffle: [True]
+    batch_size: [2048]
+    epochs: [5]
+    learning_rate: [0.001]
+    optimizer: [Adam]
+    activation_function: [relu]
+    dropout: [0.0, 0.3]
 
 logging:
-  log_to_wandb: True
+  log_to_wandb: False
   project_name: 'mnist_cnn'

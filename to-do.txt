@@ -10,3 +10,4 @@
 10. What about cross-validation?
 11. What about testing different architectures
 12. What about visualising the model, any packages?
+13. wandb experiment name is based on the date
