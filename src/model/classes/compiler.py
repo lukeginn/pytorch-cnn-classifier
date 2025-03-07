@@ -71,10 +71,8 @@ class ModelCompiler(nn.Module):
             input_size (tuple): The size of the input tensor (e.g., (1, 1, 28, 28) for MNIST).
         """
         x = torch.randn((1, 1, 28, 28))
-
         y = self.forward(x)
 
-        path = str(Paths.MODEL_ARCHITECTURE_PATH.value).rsplit(".", 1)[0]
         dot = make_dot(y, params=dict(self.named_parameters()))
 
         # Customize graph attributes
@@ -82,6 +80,7 @@ class ModelCompiler(nn.Module):
         dot.node_attr.update(shape="box", style="filled", fillcolor="lightblue")
         dot.edge_attr.update(color="gray")
 
+        path = str(Paths.MODEL_ARCHITECTURE_PATH.value).rsplit(".", 1)[0]
         dot.render(path, format="png")
 
         logger.info(
