@@ -65,7 +65,7 @@ class ModelCompiler(nn.Module):
 
     def visualize(self):
         """
-        Visualizes the model architecture.
+        Visualizes the model architecture with tensor shapes.
 
         Args:
             input_size (tuple): The size of the input tensor (e.g., (1, 1, 28, 28) for MNIST).
@@ -73,12 +73,39 @@ class ModelCompiler(nn.Module):
         x = torch.randn((1, 1, 28, 28))
         y = self.forward(x)
 
+        # Hook to capture the shapes
+        def hook(module, input, output):
+            module_name = module.__class__.__name__
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                shape_str = f"{module_name}: {list(output.shape)}"
+                module.__dict__['shape_str'] = shape_str
+
+        hooks = []
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+                hooks.append(layer.register_forward_hook(hook))
+
+        # Forward pass to trigger hooks
+        self.forward(x)
+
+        # Remove hooks
+        for hook in hooks:
+            hook.remove()
+
+        # Create dot graph
         dot = make_dot(y, params=dict(self.named_parameters()))
 
         # Customize graph attributes
         dot.graph_attr.update(dpi="300")  # Left to Right layout and increase DPI
         dot.node_attr.update(shape="box", style="filled", fillcolor="lightblue")
         dot.edge_attr.update(color="gray")
+
+        # Add shapes to nodes
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.Linear)) and 'shape_str' in layer.__dict__:
+                node = dot.get_node(str(id(layer)))
+                if node:
+                    node.attr['label'] += f"\n{layer.shape_str}"
 
         path = str(Paths.MODEL_ARCHITECTURE_PATH.value).rsplit(".", 1)[0]
         dot.render(path, format="png")

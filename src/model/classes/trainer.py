@@ -165,7 +165,7 @@ class ModelTrainer:
             fold_metrics.append(metrics)
 
         avg_metrics = ModelTrainerUtils.compute_average_metrics(fold_metrics)
-        ModelTrainerUtils.log_cross_validation_metrics(avg_metrics, self.k_folds)
+        ModelTrainerUtils.log_cross_validation_metrics(avg_metrics, self.k_folds, self.log_to_wandb)
 
         self.log_to_wandb = (
             original_log_to_wandb  # Re-enable wandb logging after cross-validation

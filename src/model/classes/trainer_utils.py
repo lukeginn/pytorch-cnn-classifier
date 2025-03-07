@@ -149,7 +149,7 @@ class ModelTrainerUtils:
         return metrics
 
     @staticmethod
-    def log_cross_validation_metrics(metrics, k_folds):
+    def log_cross_validation_metrics(metrics, k_folds, log_to_wandb):
         accuracy = metrics["average_accuracy"]
         precision = metrics["average_precision"]
         recall = metrics["average_recall"]
@@ -161,7 +161,7 @@ class ModelTrainerUtils:
         logger.info(f"Average Recall: {recall:.4f}")
         logger.info(f"Average F1 Score: {f1:.4f}")
 
-        if wandb.run:
+        if log_to_wandb:
             wandb.log(
                 {
                     "cv_average_accuracy": accuracy,
