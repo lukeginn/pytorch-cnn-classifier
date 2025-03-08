@@ -16,3 +16,4 @@
 16. (DONE) Bug in epoch not overwriting
 17. (DONE) Make the visualisation code go to a compile utils clss
 18. Add type hinting
+19. Test commit
