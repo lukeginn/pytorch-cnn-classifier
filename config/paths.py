@@ -17,5 +17,5 @@ class Paths(Enum):
 
 def create_directories():
     for path in Paths:
-        if path.value.suffix == "":  # Check if it's a directory (no suffix)
+        if path.value.suffix == "":
             path.value.mkdir(parents=True, exist_ok=True)

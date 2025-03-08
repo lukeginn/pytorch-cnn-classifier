@@ -24,7 +24,7 @@ class HyperparameterTuner:
             logger.info(f"Training with params: {params}")
 
             self._set_config(params)
-            score = self._compile_train_and_evaluate(train_images, train_labels)
+            score = self._compile_train_and_cross_validate(train_images, train_labels)
             score_to_compare = score[self.metric_to_optimize]
 
             params_list.append(params)
@@ -58,7 +58,7 @@ class HyperparameterTuner:
             if "dropout" in layer and i != len(self.config["model"]["fc_layers"]) - 1:
                 layer["dropout"] = params["dropout"]
 
-    def _compile_train_and_evaluate(self, train_images, train_labels):
+    def _compile_train_and_cross_validate(self, train_images, train_labels):
         model = ModelCompiler(self.config)
         model.compile()
         trainer = ModelTrainer(model, self.config, False)

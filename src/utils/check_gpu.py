@@ -18,7 +18,3 @@ def check_gpu():
         logger.info("No GPU found, using CPU")
 
     return device
-
-
-if __name__ == "__main__":
-    check_gpu()
