@@ -191,7 +191,10 @@ class ModelCompiler(nn.Module):
 
     def _add_shapes_to_nodes(self, dot):
         for layer in self.modules():
-            if isinstance(layer, (nn.Conv2d, nn.Linear)) and 'shape_str' in layer.__dict__:
+            if (
+                isinstance(layer, (nn.Conv2d, nn.Linear))
+                and "shape_str" in layer.__dict__
+            ):
                 node = dot.node(str(id(layer)))
                 if node:
-                    node.attr['label'] += f"\n{layer.shape_str}"
+                    node.attr["label"] += f"\n{layer.shape_str}"

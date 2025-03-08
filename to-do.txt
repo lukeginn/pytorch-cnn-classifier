@@ -14,4 +14,5 @@
 14. (DONE) Output the cross-validation results as a csv file in outputs
 15. (NOT DONE) Get black formatting working again
 16. (DONE) Bug in epoch not overwriting
-17. (DON) Make the visualisation code go to a compile utils clss
+17. (DONE) Make the visualisation code go to a compile utils clss
+18. Add type hinting
