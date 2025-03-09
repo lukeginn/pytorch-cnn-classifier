@@ -56,8 +56,7 @@ class ModelTrainerUtils:
 
     @staticmethod
     def initialize_model(model):
-        #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        device = "cpu"
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         return model, device
 
