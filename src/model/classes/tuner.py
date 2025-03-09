@@ -55,8 +55,11 @@ class HyperparameterTuner:
         self.config["model"]["optimizer"] = params["optimizer"]
         self.config["model"]["activation_function"] = params["activation_function"]
         for i, layer in enumerate(self.config["model"]["fc_layers"]):
-            if "dropout" in layer and i != len(self.config["model"]["fc_layers"]) - 1:
-                layer["dropout"] = params["dropout"]
+            if layer["type"] == "Dropout":
+                layer["p"] = params["dropout"]
+        for i, layer in enumerate(self.config["model"]["deconv_layers"]):
+            if layer["type"] == "Dropout2d":
+                layer["p"] = params["dropout2d"]
 
     def _compile_train_and_cross_validate(self, train_images, train_labels):
         model = ModelCompiler(self.config)

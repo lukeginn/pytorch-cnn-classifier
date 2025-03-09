@@ -2,27 +2,30 @@ random_state: 42
 
 model:
   shuffle: True
-  batch_size: 2048
+  batch_size: 128 #2048
   epochs: 40
   learning_rate: 0.001
   optimizer: Adam
   activation_function: tanh
   conv_layers:
-    - in_channels: 1
+    - type: Conv2d
+      in_channels: 1
       out_channels: 32
       kernel_size: 3
       stride: 1
       padding: 1
-    - in_channels: 32
+    - type: MaxPool2d
+      kernel_size: 2
+      stride: 2
+      padding: 0
+    - type: Conv2d
+      in_channels: 32
       out_channels: 64
       kernel_size: 3
       stride: 1
       padding: 1
-  pool_layers:
-    - kernel_size: 2
-      stride: 2
-      padding: 0
-    - kernel_size: 2
+    - type: MaxPool2d
+      kernel_size: 2
       stride: 2
       padding: 0
   view_shape:
@@ -30,12 +33,19 @@ model:
     height: 7
     width: 7
   fc_layers:
-    - out_features: 128
-      dropout: 0.5
-    - out_features: 64
-      dropout: 0.5
-    - out_features: 10
-      dropout: 0.0
+    - type: Linear
+      in_features: 3136
+      out_features: 128
+    - type: Dropout
+      p: 0.5
+    - type: Linear
+      in_features: 128
+      out_features: 64
+    - type: Dropout
+      p: 0.5
+    - type: Linear
+      in_features: 64
+      out_features: 10
 
 evaluation:
   train: True
@@ -58,5 +68,5 @@ cross_validation:
     dropout: [0.20]
 
 logging:
-  log_to_wandb: True
+  log_to_wandb: False
   project_name: 'mnist_cnn'
