@@ -70,8 +70,6 @@ class ModelCompiler(nn.Module):
         x = torch.randn((1, 1, 28, 28))
         y = self.forward(x)
 
-        self.forward(x)
-
         dot = self._create_dot_graph(y)
         self._customize_graph(dot)
         self._add_shapes_to_nodes(dot)

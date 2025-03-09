@@ -15,7 +15,7 @@ class HyperparameterTuner:
     def tune(self, train_images, train_labels):
         logger.info("Starting hyperparameter tuning")
 
-        best_score = float("-inf")
+        best_score = float("inf")
         best_params = None
         params_list = []
         scores_list = []
@@ -30,7 +30,7 @@ class HyperparameterTuner:
             params_list.append(params)
             scores_list.append(score)
 
-            if score_to_compare > best_score:
+            if score_to_compare < best_score:
                 best_score = score_to_compare
                 best_params = params
 

@@ -1,9 +1,5 @@
-conda create -n pytorch-gpu python=3.8 -y
-conda activate pytorch-gpu
-pip install torch torchvision torchaudio pyyaml --index-url https://download.pytorch.org/whl/cu118
-pip install scipy
-pip install joblib
-pip install wandb
-pip install pandas
-pip install black
-pip install torchviz
+conda create -n pytorch-gpu2 python=3.8 -y
+conda activate pytorch-gpu2
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+conda install pyyaml scipy joblib wandb pandas black matplotlib tk scikit-image
+pip install torchviz torchaudio
