@@ -2,7 +2,7 @@ random_state: 42
 
 model:
   shuffle: True
-  batch_size: 128 #2048
+  batch_size: 1024
   epochs: 40
   learning_rate: 0.001
   optimizer: Adam
@@ -14,6 +14,8 @@ model:
       kernel_size: 3
       stride: 1
       padding: 1
+    - type: BatchNorm2d
+      num_features: 32
     - type: MaxPool2d
       kernel_size: 2
       stride: 2
@@ -24,6 +26,8 @@ model:
       kernel_size: 3
       stride: 1
       padding: 1
+    - type: BatchNorm2d
+      num_features: 64
     - type: MaxPool2d
       kernel_size: 2
       stride: 2
@@ -36,11 +40,15 @@ model:
     - type: Linear
       in_features: 3136
       out_features: 128
+    - type: LayerNorm
+      normalized_shape: 128
     - type: Dropout
       p: 0.5
     - type: Linear
       in_features: 128
       out_features: 64
+    - type: LayerNorm
+      normalized_shape: 64
     - type: Dropout
       p: 0.5
     - type: Linear
@@ -68,5 +76,5 @@ cross_validation:
     dropout: [0.20]
 
 logging:
-  log_to_wandb: False
+  log_to_wandb: True
   project_name: 'mnist_cnn'

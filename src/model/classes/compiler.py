@@ -103,6 +103,8 @@ class ModelCompiler(nn.Module):
                 self.fc_layers.append(nn.Dropout(layer_cfg['p']))
             elif layer_type == 'BatchNorm1d':
                 self.fc_layers.append(nn.BatchNorm1d(layer_cfg['num_features']))
+            elif layer_type == 'LayerNorm':
+                self.fc_layers.append(nn.LayerNorm(layer_cfg['normalized_shape']))
             else:
                 raise ValueError(f"Unsupported layer type: {layer_type}")
 
