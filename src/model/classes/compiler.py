@@ -134,6 +134,10 @@ class ModelCompiler(nn.Module):
                     stride=layer_cfg['stride'],
                     padding=layer_cfg['padding']
                 ))
+            elif layer_type == 'PixelShuffle':
+                self.deconv_layers.append(nn.PixelShuffle(layer_cfg['upscale_factor']))
+            elif layer_type == 'InstanceNorm2d':
+                self.deconv_layers.append(nn.InstanceNorm2d(layer_cfg['num_features']))
             else:
                 raise ValueError(f"Unsupported layer type: {layer_type}")
 
